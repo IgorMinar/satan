@@ -35,7 +35,7 @@ class Integer
 end
 
 class WatchedRule
-  attr_accessor :above,:times,:name,:kind,:uri,:args
+  attr_accessor :above,:below,:times,:name,:kind,:uri,:args
   def hit(pid)
     @hits[pid] ||= 0
     @hits[pid]=@hits[pid]+1
@@ -124,6 +124,19 @@ class Satan
         hit = rule.hit(opts[:pid])
         p "Locked on to pid #{opts[:pid]} #{rule.uri}" if debug
         p "Failed to respond with http 200 #{rule.uri} / #{hit}" if debug
+        reap(rule,opts) if hit >= rule.times
+      end
+    end
+
+    if rule.kind == :jvm_free_heap and (rule.args.nil? or opts[:command] =~ /#{rule.args}/)
+      og_max = `jstat -gccapacity #{opts[:pid]} 0 1`.split(/\n/)[1].split(/\s+/)[7].to_i
+      og_cur = `jstat -gc #{opts[:pid]} 0 1`.split(/\n/)[1].split(/\s+/)[7].to_i
+      free_heap = og_max - og_cur
+
+      if free_heap < rule.below
+        hit = rule.hit(opts[:pid])
+        p "Locked on to pid #{opts[:pid]} #{opts[:command]}" if debug
+        p "Process below jvm free heap threshold of #{rule.below.to_size}, was #{free_heap.to_size} / #{hit}" if debug
         reap(rule,opts) if hit >= rule.times
       end
     end
