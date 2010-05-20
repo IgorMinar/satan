@@ -10,6 +10,13 @@
     <dependency name='net' grouping='require_all' restart_on='none' type='service'>
       <service_fmri value='svc:/network/loopback'/>
     </dependency>
+
+<!-- Add service_fmri value
+    <dependency name='application' grouping='require_all' restart_on='restart' type='service'>
+      <service_fmri value=''/>
+    </dependency>
+-->
+
     <dependent name='satan' restart_on='none' grouping='optional_all'>
       <service_fmri value='svc:/milestone/multi-user'/>
     </dependent>
