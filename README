@@ -59,5 +59,14 @@ Satan.watch do |s|
       http.uri    = "http://localhost:8161/admin/queues.jsp"  # the URI
       http.times  = 5                                         # how many times before the kill
     end
+
+    # Checks free space in the old generation of a JVM heap
+    # requires $JDK_HOME/bin/jstat to be on the PATH
+    process.condition(:jvm_free_heap) do |free_heap|
+      free_heap.name = "JVM Free Heap Check"
+      free_heap.args = "jetty"
+      free_heap.below = 200.megabytes           # minimum free old generation space
+      free_heap.times = 5                       # how many times we can hit this condition before killing
+    end
   end
 end
