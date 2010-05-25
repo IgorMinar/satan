@@ -172,8 +172,11 @@ class Satan
   end
 end
 
-if ARGV[0].nil?
-  p "satan /path/to/satan.cfg"
-else
-  load File.expand_path(ARGV[0])
+if $0 =~ /^(.*\/)?#{__FILE__}$/
+  if ARGV[0].nil?
+    p "usage: satan /path/to/satan.cfg"
+    exit 1
+  else
+    load File.expand_path(ARGV[0])
+  end
 end
