@@ -8,16 +8,24 @@ class Integer
   def to_size
     byte_size = self.to_i
     if byte_size < 1024
-      "#{byte_size}KB"
-    elsif byte_size > 1024*1024
-      "#{sprintf('%0.2f',byte_size/1024/1024.0)}GB"
-    elsif byte_size > 1024
-    "#{byte_size/1024}MB"
+      "#{byte_size}B"
+    elsif byte_size < 1024*1024
+      "#{sprintf('%0.2f', byte_size/1024.0)}KB"
+    elsif byte_size < 1024*1024*1024
+      "#{sprintf('%0.2f', byte_size/1024/1024.0)}MB"
+    else
+      "#{sprintf('%0.2f', byte_size/1024/1024/1024.0)}GB"
     end
   end
   def percent;self.to_i;end
-  def megabytes;self.to_i*1024;end
-  def gigabytes;self.to_i*1024*1024;end
+  def byte; self.bytes; end
+  def bytes; self.to_i; end
+  def kilobyte; self.to_i * 1024; end
+  def kilobytes; self.to_i * 1024; end
+  def megabyte; self.megabytes; end
+  def megabytes;self.to_i*1024*1024;end
+  def gigabyte; self.gigabytes; end
+  def gigabytes;self.to_i*1024*1024*1024;end
   def second;self.seconds;end
   def seconds;self.to_i;end
   def minute;self.minutes;end
@@ -87,7 +95,7 @@ class Satan
     cmd = "ps -U #{satan.user} -G #{satan.group} -o pid,pcpu,rss,args | grep #{satan.deamon}"
     `#{cmd}`.split(/\n/).each do |line|
       out = line.split(/ /).delete_if {|arg| arg == "" or arg.nil? }
-      yield :pid=>out[0].to_i,:cpu=>out[1].to_i,:rss=>out[2].to_i,:command=>out[3..out.size].join(' '),:rule=>rule
+      yield :pid=>out[0].to_i,:cpu=>out[1].to_i,:rss=>out[2].to_i*1024,:command=>out[3..out.size].join(' '),:rule=>rule
     end
   end
   
