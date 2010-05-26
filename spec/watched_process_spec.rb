@@ -21,7 +21,7 @@ describe WatchedProcess do
 
   it "should extract the pid for multiprocess service" do
     process = WatchedProcess.new(:webserver)
-    process.daemon = 'webserver'
+    process.daemon = 'wserver'
     process.pid.should == 453
   end
   
