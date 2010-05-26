@@ -178,12 +178,14 @@ class Satan
   end
 
   def reap(proc, rule)
-    p "Killing process #{proc.pid}" if debug
+    p "Restarting service #{proc.fmri}"
     notify_admin(proc, rule, contact) unless contact.nil? or !contact.include?('@')
     unless safe_mode
       `svcadm restart #{proc.fmri}`
       `sleep #{self.restart_grace}`
-      `kill -9 #{self.extract_pids.join(' ')}`
+      pids = self.extract_pids.join(' ')
+      p "Killing the following pids for service #{proc.fmri}: #{pids}"
+      `kill -9 #{pids}`
     end
   end
 
