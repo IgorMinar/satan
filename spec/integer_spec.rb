@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__), '..', 'satan')
+require 'satan'
 
 describe Integer do  
 

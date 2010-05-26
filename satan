@@ -4,6 +4,7 @@ require 'time'
 require 'uri'
 require 'net/http'
 
+
 class Integer
   def to_size
     byte_size = self.to_i
@@ -42,144 +43,228 @@ class Integer
   def years;self.to_i*60*60*24*7*4*12;end
 end
 
-class WatchedRule
-  attr_accessor :above,:below,:times,:name,:kind,:uri,:args
-  def hit(pid)
-    @hits[pid] ||= 0
-    @hits[pid]=@hits[pid]+1
+
+class WatchRule
+  attr_accessor :name, :times, :pid, :debug
+  attr_reader :failures
+
+  def violated
+    @failures >= self.times
   end
-  def reset(pid)
-    @hits[pid] ||= 0
+
+  protected
+  def passed(result)
+    if (result)
+      @failures += (@failures > 0 ? -1 : 0)
+    else
+      @failures += 1
+    end
   end
+
+  private
   def initialize
-    @hits = Hash.new
+    @times = 1
+    @failures = 0
   end
 end
+
 
 class WatchedProcess
-  def initialize
+  attr_accessor :daemon, :debug
+  attr_reader :fmri, :pid, :rules
+
+  def pid
+    return @pid unless @pid.nil?
+
+    @pid = extract_pid
+  end
+  
+  def condition(rule_name)
+    if rule_name.kind_of? Class
+      rule = rule_name.new
+    else
+      class_name = rule_name.to_s.split("_").map{|w| w.capitalize}.join() << 'Rule'
+      klazz = Kernel.const_get(class_name)
+      rule = klazz.new
+    end
+    
+    yield rule
+    rule.pid = self.pid
+    rule.debug = self.debug
+    @rules << rule
+  end
+
+  private
+  def initialize(service_fmri)
+    @fmri = service_fmri
     @rules = Array.new
   end
-  
-  def rules
-    @rules
-  end
-  
-  def condition(what)
-    rule = WatchedRule.new
-    yield rule
-    rule.kind = what
-    @rules << rule
+
+  def extract_pid
+    lines = pids_for_fmri.split(/\n/)
+    if [0,1].include? lines.length
+      raise RuntimeException, "service {#{@fmri}} not found"
+    else
+      lines.shift
+      while (lines.length > 0)
+        words = lines.shift.split(/\s+/)
+        ex_pid = words[2].to_i
+        ex_daemon = words[3]
+
+        if self.daemon.nil?
+          return ex_pid
+        elsif ex_daemon == self.daemon
+          return ex_pid
+        end
+      end
+
+      raise "no pid for service #{@fmri} was found"
+    end
+
+    def pids_for_fmri
+      `svcs -H -o FMRI -p #{@fmri}`
+    end
   end
 end
 
+
 class Satan
-  attr_accessor :name,:interval,:user,:group,:deamon,:debug,:args,:safe_mode,:sleep_after_kill,:contact
-  
-  def initialize
-    @procs = Array.new
-  end
-  
-  def procs
-    @procs
-  end
-  
-  def kill_if(&block)
-    wp = WatchedProcess.new
-    yield wp
-    @procs << wp
-  end
-  
-  def self.extract_process_info(satan,rule)
-    #puts "kind: #{rule.kind}\tProcessed #{rule.name}" if satan.debug
-    cmd = "ps -U #{satan.user} -G #{satan.group} -o pid,pcpu,rss,args | grep #{satan.deamon}"
-    `#{cmd}`.split(/\n/).each do |line|
-      out = line.split(/ /).delete_if {|arg| arg == "" or arg.nil? }
-      yield :pid=>out[0].to_i,:cpu=>out[1].to_i,:rss=>out[2].to_i*1024,:command=>out[3..out.size].join(' '),:rule=>rule
-    end
-  end
-  
-  #pid,cpu,rss,command,rule
-  def check_process(opts)
-    rule = opts[:rule]
-    
-    if rule.kind == :memory and (rule.args.nil? or opts[:command] =~ /#{rule.args}/)
-      if opts[:rss] > rule.above
-        hit = rule.hit(opts[:pid])
-        p "Locked on to pid #{opts[:pid]} #{opts[:command]}" if debug
-        p "Process above memory threshold #{rule.above.to_size} / #{hit}" if debug
-        reap(rule,opts) if hit >= rule.times
-      end
-    end
-    
-    if rule.kind == :cpu and (rule.args.nil? or opts[:command] =~ /#{rule.args}/)
-      if opts[:cpu] > rule.above
-        hit = rule.hit(opts[:pid])
-        p "Locked on to pid #{opts[:pid]} #{opts[:command]}" if debug
-        p "Process above cpu threshold #{rule.above}% / #{hit}" if debug
-        reap(rule,opts) if hit >= rule.times
-      end
-    end
-    
-    # http rule args must be in the command so we can associate the uri to pid
-    if rule.kind == :http and opts[:command] =~ /#{rule.args}/ 
-      begin
-        uri = URI.parse(rule.uri)
-        req = Net::HTTP::Get.new(rule.uri)
-        resp = Net::HTTP.new(uri.host,uri.port).start{|http| http.request(req) }
-        raise if resp.code.to_i != 200
-      rescue
-        hit = rule.hit(opts[:pid])
-        p "Locked on to pid #{opts[:pid]} #{rule.uri}" if debug
-        p "Failed to respond with http 200 #{rule.uri} / #{hit}" if debug
-        reap(rule,opts) if hit >= rule.times
-      end
-    end
-
-    if rule.kind == :jvm_free_heap and (rule.args.nil? or opts[:command] =~ /#{rule.args}/)
-      og_max = `jstat -gccapacity #{opts[:pid]} 0 1`.split(/\n/)[1].split(/\s+/)[7].to_i
-      og_cur = `jstat -gc #{opts[:pid]} 0 1`.split(/\n/)[1].split(/\s+/)[7].to_i
-      free_heap = og_max - og_cur
-
-      if free_heap < rule.below
-        hit = rule.hit(opts[:pid])
-        p "Locked on to pid #{opts[:pid]} #{opts[:command]}" if debug
-        p "Process below jvm free heap threshold of #{rule.below.to_size}, was #{free_heap.to_size} / #{hit}" if debug
-        reap(rule,opts) if hit >= rule.times
-      end
-    end
-    
-  end
-  
-  def notify_admin(rule,opts)
-    tag = "[SATAN] Reaped Process #{opts[:pid]}"
-    `echo "#{tag} on #{Time.now.to_s}\n\nCommand:\t#{opts[:command]}\nRule:\t#{rule.name}" | mailx -s "#{tag}" #{contact}`
-    return true
-  end
-  
-  def reap(rule,opts)
-    p "Reaping process #{opts[:pid]}" if debug
-    `kill -9 #{opts[:pid]}` unless safe_mode
-    rule.reset(opts[:pid])
-    notify_admin(rule,opts) unless contact.nil? or !contact.include?('@')
-    sleep(sleep_after_kill) # sleep for a while before reaping more processes
-  end
+  attr_accessor :name,:fmri,:interval,:debug,:safe_mode,:contact
+  attr_reader :procs
   
   def self.watch(&block)
     s = Satan.new
     yield s
-    p "Satan is now watching"
+    p "Satan is now watching #{s.fmri} and its pid(s): " + s.procs.collect{|p| p.pid}.join(',')
     loop do
       sleep s.interval
       s.procs.each do |p|
         p.rules.each do |r|
-          extract_process_info(s,r) {|opts| s.check_process(opts) if s.args.nil? or opts[:command] =~ /#{s.args}/ }
+          r.test
+          return s.send(:reap, p, r) if r.violated
         end
       end
     end
+
+    s
+  end
+
+  def kill_if(&block)
+    proc = WatchedProcess.new(self.fmri)
+    yield proc
+    proc.debug = self.debug
+    @procs << proc
+  end
+
+  private
+  def initialize
+    @procs = Array.new
+  end
+
+  def reap(proc, rule)
+    p "Killing process #{proc.pid}" if debug
+    notify_admin(proc, rule, contact) unless contact.nil? or !contact.include?('@')
+    `kill -9 #{proc.pid}` unless safe_mode
+  end
+
+  def notify_admin(proc, rule, contact)
+    subject = "[SATAN] Restarted #{proc.fmri} on " + self.hostname
+    message = "#{subject}\n\nCommand:\t#{proc.daemon}\nRule:\t#{rule.class}"
+    message << "\n#{rule.message}" if rule.respond_to? :message
+    send_email(subject, message, contact)
+  end
+
+  def send_email(subject, message, address)
+    `echo "#{message}" | mailx -s "#{subject}" #{address}`
+  end
+
+  def hostname
+    `hostname`.strip
   end
 end
 
+
+module PsParser
+  def ps_for_pid(pid)
+    `ps -o pid,pcpu,rss,args -p #{pid}`
+  end
+
+  def ps(pid)
+    out = ps_for_pid(pid).split(/\n/)[1].split(/ /).delete_if {|arg| arg == "" or arg.nil? }
+    { :pid=>out[0].to_i, :cpu=>out[1].to_i, :rss=>out[2].to_i*1024, :command=>out[3..out.size].join(' ') }
+  end
+end
+
+
+class CpuRule < WatchRule
+  include PsParser
+  attr_accessor :above
+
+  def test
+    cpu = ps(self.pid)[:cpu]
+    #p "CpuRule: value=#{cpu} must be < than threashold=#{self.above}"
+    self.passed(cpu < self.above)
+  end
+end
+
+
+class MemoryRule < WatchRule
+  include PsParser
+  attr_accessor :above
+
+  def test
+    mem = ps(self.pid)[:rss]
+    self.passed(mem < self.above)
+  end
+end
+
+
+class HttpRule < WatchRule
+  def test
+    begin
+        uri = URI.parse(self.uri)
+        req = Net::HTTP::Get.new(self.uri)
+        resp = Net::HTTP.new(uri.host,uri.port).start{|http| http.request(req) }
+        raise if resp.code.to_i != 200
+        test(true)
+      rescue
+        test(false)
+      end
+  end
+end
+
+
+class JvmFreeHeapRule < WatchRule
+  attr_accessor :below
+
+  def jstat_gccapacity_for_pid(pid)
+    `jstat -gccapacity #{pid} 0 1`
+  end
+
+  def og_max(pid)
+    jstat_gccapacity_for_pid(pid).split(/\n/)[1].split(/\s+/)[7].to_i.kilobytes
+  end
+
+  def jstat_gc_for_pid(pid)
+    `jstat -gc #{pid} 0 1`
+  end
+
+  def og_current(pid)
+    jstat_gc_for_pid(pid).split(/\n/)[1].split(/\s+/)[7].to_i.kilobytes
+  end
+
+  def test
+    free_heap = og_max(self.pid) - og_current(self.pid)
+    self.passed(free_heap > self.below)
+  end
+
+  def message
+    "Process below jvm free heap threshold of #{self.below.to_size}. Failure #{self.failures} of #{self.times}."
+  end
+end
+
+
+# main exec block
 if $0 =~ /^(.*\/)?#{__FILE__}$/
   if ARGV[0].nil?
     p "usage: satan /path/to/satan.cfg"
