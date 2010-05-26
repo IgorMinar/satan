@@ -1,6 +1,6 @@
 Automated Process Reaper for Unix Systems
 
-Satan does just one thing, and one thing only; kill processes. Satan was designed to work with Solaris’ SMF self-healing properties. Let Satan kill while SMF revive. The Satan name is a play off of the God Monitor http://god.rubyforge.org/ 
+Satan does just one thing, and one thing only; triggers restart of failed SMF services. Satan was designed to work with Solaris’ SMF self-healing properties. Let Satan restart/kill while SMF revive. The Satan name is a play off of the God Monitor http://god.rubyforge.org/
 
 The reason Satan was developed was because God overlaps too much in functionality with SMF so it is not practical to run on Solaris.
 
@@ -26,36 +26,29 @@ The configuration is all done in Ruby, clean and simple.
 
 Satan.watch do |s|
   s.name = "jvm instances"                # name of job
-  s.user = "webservd"                     # under what user
-  s.group = "webservd"                    # under what group
-  s.deamon = "java"                       # deamon binary name to grep for
-  s.args = nil                            # globally look for specific arguments, optional
+  s.fmri = "applications/myapp"           # solaris FMRI of the SMF service to watch
   s.debug = true                          # if to write out debug information
   s.safe_mode = false                     # If in safe mode, satan will not kill ;-(
   s.interval = 10.seconds                 # interval to run at to collect statistics
-  s.sleep_after_kill = 1.minute           # sleep after killing, satan is tired!
   s.contact = "victori@fabulously40.com"  # admin contact, optional if you want email alerts
-  
+  s.restart_grace = 30.seconds            # grace period for svcadm restart before kill -9 is used
+
+
   s.kill_if do |process|
+    process.daemon = "java"               # name of the process that rules should be applied to
+
     process.condition(:cpu) do |cpu|      # on cpu condition
-      cpu.name  = "50% CPU limit"         # name for job
-      cpu.args  = "jetty"                 # make sure this is a jetty process, optional
       cpu.above = 48.percent              # if above certain percentage
       cpu.times = 5                       # how many times we can hit this condition before killing
     end
-    
+
     process.condition(:memory) do |memory|  # on memory condition
-      memory.name  = "850MB limit"          # name for job
-      memory.args  = "jetty"                # make sure this is a jetty process, optional
       memory.above = 850.megabytes          # limit for memory use
       memory.times = 5                      # how many times we can hit this condition before killing
     end
-    
+
     # ActiveMQ tends to die on us under heavy load so we need the power of satan!
     process.condition(:http) do |http|                        # on http condition
-      http.name   = "HTTP ActiveMQ Check"                     # name for job
-      http.args   = "8161"                                    # look for specific app arguments
-                                                              # to associate app to URI
       http.uri    = "http://localhost:8161/admin/queues.jsp"  # the URI
       http.times  = 5                                         # how many times before the kill
     end
@@ -63,8 +56,6 @@ Satan.watch do |s|
     # Checks free space in the old generation of a JVM heap
     # requires $JDK_HOME/bin/jstat to be on the PATH
     process.condition(:jvm_free_heap) do |free_heap|
-      free_heap.name = "JVM Free Heap Check"
-      free_heap.args = "jetty"
       free_heap.below = 200.megabytes           # minimum free old generation space
       free_heap.times = 5                       # how many times we can hit this condition before killing
     end
