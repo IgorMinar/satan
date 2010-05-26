@@ -69,14 +69,56 @@ class WatchRule
 end
 
 
+module SvcsParser
+
+  def extract_pids
+    lines = pids_for_fmri.split(/\n/)
+    if [0,1].include? lines.length
+      raise RuntimeException, "service {#{@fmri}} not found"
+    else
+      lines.shift
+      lines.collect {|line| line.split(/\s+/)[2].to_i }
+    end
+  end
+
+  def extract_pid(daemon = nil)
+    lines = pids_for_fmri.split(/\n/)
+    if [0,1].include? lines.length
+      raise RuntimeException, "service {#{@fmri}} not found"
+    else
+      lines.shift
+      while (lines.length > 0)
+        words = lines.shift.split(/\s+/)
+        ex_pid = words[2].to_i
+        ex_daemon = words[3]
+
+        if daemon.nil?
+          return ex_pid
+        elsif ex_daemon == self.daemon
+          return ex_pid
+        end
+      end
+
+      raise "no pid for service #{@fmri} was found"
+    end
+  end
+
+  def pids_for_fmri
+    `svcs -H -o FMRI -p #{@fmri}`
+  end
+end
+
+
 class WatchedProcess
+  include SvcsParser
+  
   attr_accessor :daemon, :debug
   attr_reader :fmri, :pid, :rules
 
   def pid
     return @pid unless @pid.nil?
 
-    @pid = extract_pid
+    @pid = extract_pid(self.daemon)
   end
   
   def condition(rule_name)
@@ -99,37 +141,13 @@ class WatchedProcess
     @fmri = service_fmri
     @rules = Array.new
   end
-
-  def extract_pid
-    lines = pids_for_fmri.split(/\n/)
-    if [0,1].include? lines.length
-      raise RuntimeException, "service {#{@fmri}} not found"
-    else
-      lines.shift
-      while (lines.length > 0)
-        words = lines.shift.split(/\s+/)
-        ex_pid = words[2].to_i
-        ex_daemon = words[3]
-
-        if self.daemon.nil?
-          return ex_pid
-        elsif ex_daemon == self.daemon
-          return ex_pid
-        end
-      end
-
-      raise "no pid for service #{@fmri} was found"
-    end
-
-    def pids_for_fmri
-      `svcs -H -o FMRI -p #{@fmri}`
-    end
-  end
 end
 
 
 class Satan
-  attr_accessor :name,:fmri,:interval,:debug,:safe_mode,:contact
+  include SvcsParser
+
+  attr_accessor :name, :fmri, :interval, :debug, :safe_mode, :contact, :restart_grace
   attr_reader :procs
   
   def self.watch(&block)
@@ -145,8 +163,6 @@ class Satan
         end
       end
     end
-
-    s
   end
 
   def kill_if(&block)
@@ -164,7 +180,11 @@ class Satan
   def reap(proc, rule)
     p "Killing process #{proc.pid}" if debug
     notify_admin(proc, rule, contact) unless contact.nil? or !contact.include?('@')
-    `kill -9 #{proc.pid}` unless safe_mode
+    unless safe_mode
+      `svcadm restart #{proc.fmri}`
+      `sleep #{self.restart_grace}`
+      `kill -9 #{self.extract_pids.join(' ')}`
+    end
   end
 
   def notify_admin(proc, rule, contact)

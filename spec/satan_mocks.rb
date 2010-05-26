@@ -8,7 +8,7 @@ SVCS_OUT = {
 }
 
 
-class WatchedProcess
+module SvcsParser
   def pids_for_fmri
     SVCS_OUT[self.fmri.to_sym]
   end
