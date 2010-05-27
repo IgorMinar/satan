@@ -267,16 +267,18 @@ class HttpRule < WatchRule
 
   def test
     begin
-        uri = URI.parse(self.uri)
-        req = Net::HTTP::Get.new(self.uri)
-        resp = Net::HTTP.new(uri.host,uri.port).start do |http|
-          http.read_timeout = self.timeout if self.timeout
-          http.request(req)
-        end
-        passed(resp.code.to_i == 200)
-      rescue
-        passed(false)
+      uri = URI.parse(self.uri)
+      req = Net::HTTP::Get.new(self.uri)
+      resp = Net::HTTP.new(uri.host,uri.port).start do |http|
+        http.read_timeout = self.timeout if self.timeout
+        http.request(req)
       end
+      passed(resp.code.to_i == 200)
+      p "http failure: status code was " << resp.code
+    rescue Exception => e
+      passed(false)
+      p "http failure: " << e
+    end
   end
 
   def message
