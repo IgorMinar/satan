@@ -14,7 +14,11 @@ Features
 INSTALLATION
 
   - Install satan on your run path: /opt/bin;/opt/sfw/bin;/usr/bin
+  - Create a satan config file, look at satan.cfg as an example
   - Edit satan.smf to your liking and import: svccfg import satan.smf
+    - be sure to set up the PATH in smf properly
+    - run satan with credentials that allow it to call scvadm
+    - make satan dependent on the application that it monitors, this is crucial
 
 HOW TO USE
 
@@ -62,3 +66,15 @@ Satan.watch do |s|
     end
   end
 end
+
+
+HOW DOES IT WORK
+
+  - satan is started by SMF after the monitored app starts (because of the smf dependency)
+  - satan will periodically invoke all the configured rules/conditions
+  - if a rule failure is detected, a counter for this rule is increased
+  - if a rule subsequently succeeds, the counter is decreased (up until 0)
+  - if the failure counter reaches the value defined via 'times' property, satan asks SMF to restart the monitored service
+  - if SMF fails to restart the service within 'restart_grace' period, satan will use kill -9 to kill all processes of the service (to avoid SMF maintenance state)
+  - once the monitored service shuts down, SMF will temporarily shut satan down as well (because of the dependency)
+  - monitoring will be resumed once the monitored app is started again
