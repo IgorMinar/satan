@@ -242,15 +242,16 @@ end
 
 
 class HttpRule < WatchRule
+  attr_accessor :uri
+
   def test
     begin
         uri = URI.parse(self.uri)
         req = Net::HTTP::Get.new(self.uri)
         resp = Net::HTTP.new(uri.host,uri.port).start{|http| http.request(req) }
-        raise if resp.code.to_i != 200
-        test(true)
+        passed(resp.code.to_i == 200)
       rescue
-        test(false)
+        passed(false)
       end
   end
 end
