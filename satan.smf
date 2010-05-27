@@ -7,23 +7,15 @@
     <dependency name='fs' grouping='require_all' restart_on='none' type='service'>
       <service_fmri value='svc:/system/filesystem/local'/>
     </dependency>
-    <dependency name='net' grouping='require_all' restart_on='none' type='service'>
-      <service_fmri value='svc:/network/loopback'/>
-    </dependency>
-
 <!-- Add service_fmri value
     <dependency name='application' grouping='require_all' restart_on='restart' type='service'>
       <service_fmri value=''/>
     </dependency>
 -->
-
-    <dependent name='satan' restart_on='none' grouping='optional_all'>
-      <service_fmri value='svc:/milestone/multi-user'/>
-    </dependent>
     <exec_method name='start' type='method' exec='/opt/extra/bin/satan /opt/extra/etc/satan.cfg &amp;' timeout_seconds='60'>
       <method_context working_directory='/var/log'>
-        <method_credential user='webservd' group='webservd'/>
         <method_environment>
+<!-- Add jdk path of you are using jvm monitoring rules -->
           <envvar name='PATH' value='/usr/bin:/usr/sbin:/bin:/opt/extra/bin'/>
         </method_environment>
       </method_context>
