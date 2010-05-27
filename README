@@ -17,8 +17,8 @@ INSTALLATION
   - Create a satan config file, look at satan.cfg as an example
   - Edit satan.smf to your liking and import: svccfg import satan.smf
     - be sure to set up the PATH in smf properly
-    - run satan with credentials that allow it to call scvadm
-    - make satan dependent on the application that it monitors, this is crucial
+    - run satan with credentials that allow it to call svcadm
+    - make satan dependent on the application that it monitors, this is crucial!
 
 HOW TO USE
 
