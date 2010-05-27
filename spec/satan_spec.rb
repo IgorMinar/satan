@@ -3,15 +3,11 @@ require 'satan_mocks'
 require 'timeout'
 
 describe Satan do
-  before(:each) do
-    @satan = Satan.new
-  end
 
   it "should do service restart and not kill service processes if a failure occurs and the restart kills Satan within the 'restart_grace' period" do
     temps = [10, 10, 20, 30, 40, 45, 60, 70, 100, 23, 500, 320, 120, 40, 30]
     satan = nil
     timed_out = false
-
 
     begin
       Timeout::timeout(1) {
