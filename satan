@@ -131,10 +131,11 @@ class WatchedProcess
       rule = klazz.new
     end
     
-    yield rule
     rule.pid = self.pid
     rule.daemon = self.daemon
     rule.debug = self.debug
+    yield rule
+    
     p "Initialized #{rule.class}" if self.debug
     @rules << rule
   end
@@ -170,8 +171,8 @@ class Satan
 
   def kill_if(&block)
     proc = WatchedProcess.new(self.fmri)
-    yield proc
     proc.debug = self.debug
+    yield proc
     @procs << proc
   end
 
