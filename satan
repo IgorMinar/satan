@@ -190,7 +190,7 @@ class Satan
   end
 
   def notify_admin(proc, rule, contact)
-    subject = "[SATAN] Restarted #{proc.fmri} on " + self.hostname
+    subject = "[SATAN] Restarted #{proc.fmri} on " + hostname
     message = "#{subject}\n\nCommand:\t#{proc.daemon}\nRule:\t#{rule.class}"
     message << "\n#{rule.message}" if rule.respond_to? :message
     send_email(subject, message, contact)
