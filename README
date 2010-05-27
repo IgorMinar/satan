@@ -50,6 +50,7 @@ Satan.watch do |s|
     # ActiveMQ tends to die on us under heavy load so we need the power of satan!
     process.condition(:http) do |http|                        # on http condition
       http.uri    = "http://localhost:8161/admin/queues.jsp"  # the URI
+      http.timeout = 5.seconds                                # timeout
       http.times  = 5                                         # how many times before the kill
     end
 
