@@ -60,6 +60,7 @@ class WatchRule
       @failures += 1
       p "#{self.class}: #{self.message}"
     end
+    result
   end
 
   private
@@ -273,11 +274,14 @@ class HttpRule < WatchRule
         http.read_timeout = self.timeout if self.timeout
         http.request(req)
       end
-      passed(resp.code.to_i == 200)
-      p "http failure: status code was " << resp.code
+      unless passed(resp.code.to_i == 200)
+        p "http failure: status code was " << resp.code
+      end
+    rescue SignalException => e
+      raise e #re-raise SIGTERM, etc
     rescue Exception => e
       passed(false)
-      p "http failure: " << e
+      p "http failure: #{e.class} - #{e}"
     end
   end
 
