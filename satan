@@ -45,7 +45,7 @@ end
 
 
 class WatchRule
-  attr_accessor :name, :times, :pid, :debug
+  attr_accessor :name, :times, :daemon, :pid, :debug
   attr_reader :failures
 
   def violated
@@ -58,6 +58,7 @@ class WatchRule
       @failures += (@failures > 0 ? -1 : 0)
     else
       @failures += 1
+      p "#{self.class}: #{self.message}"
     end
   end
 
@@ -132,7 +133,9 @@ class WatchedProcess
     
     yield rule
     rule.pid = self.pid
+    rule.daemon = self.daemon
     rule.debug = self.debug
+    p "Initialized #{rule.class}" if self.debug
     @rules << rule
   end
 
@@ -231,9 +234,12 @@ class CpuRule < WatchRule
   attr_accessor :above
 
   def test
-    cpu = ps(self.pid)[:cpu]
-    #p "CpuRule: value=#{cpu} must be < than threashold=#{self.above}"
-    self.passed(cpu < self.above)
+    @cpu = ps(self.pid)[:cpu]
+    self.passed(@cpu < self.above)
+  end
+
+  def message
+    "Cpu usage of the #{self.daemon} process above threshold of #{self.above.to_size}. Was #{@cpu.to_size}. Failure #{self.failures} of #{self.times}."
   end
 end
 
@@ -243,8 +249,12 @@ class MemoryRule < WatchRule
   attr_accessor :above
 
   def test
-    mem = ps(self.pid)[:rss]
-    self.passed(mem < self.above)
+    @mem = ps(self.pid)[:rss]
+    self.passed(@mem < self.above)
+  end
+
+  def message
+    "Memory usage of the #{self.daemon} process above threshold of #{self.above.to_size}. Was #{@mem.to_size}. Failure #{self.failures} of #{self.times}."
   end
 end
 
@@ -267,7 +277,7 @@ class HttpRule < WatchRule
   end
 
   def message
-    "Http check failed. Failure #{self.failures} of #{self.times}."
+    "Http check for process #{self.daemon} failed. Failure #{self.failures} of #{self.times}."
   end
 end
 
@@ -292,12 +302,12 @@ class JvmFreeHeapRule < WatchRule
   end
 
   def test
-    free_heap = og_max(self.pid) - og_current(self.pid)
-    self.passed(free_heap > self.below)
+    @free_heap = og_max(self.pid) - og_current(self.pid)
+    self.passed(@free_heap > self.below)
   end
 
   def message
-    "Process below jvm free heap threshold of #{self.below.to_size}. Failure #{self.failures} of #{self.times}."
+    "Process #{self.daemon} below jvm free heap threshold of #{self.below.to_size}. Was #{@free_heap.to_size}. Failure #{self.failures} of #{self.times}."
   end
 end
 
