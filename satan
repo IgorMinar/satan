@@ -195,7 +195,9 @@ class Satan
 
   def notify_admin(proc, rule, contact)
     subject = "[SATAN] Restarted #{proc.fmri} on " + hostname
-    message = "#{subject}\n\nCommand:\t#{proc.daemon}\nRule:\t#{rule.class}"
+    message = "#{subject}\n\n"
+    message << "Daemon:\t#{proc.daemon}\n" if proc.daemon
+    message << "Rule:\t#{rule.class}"
     message << "\n#{rule.message}" if rule.respond_to? :message
     send_email(subject, message, contact)
   end
@@ -240,7 +242,7 @@ class CpuRule < WatchRule
   end
 
   def message
-    "Cpu usage of the #{self.daemon} process above threshold of #{self.above.to_size}. Was #{@cpu.to_size}. Failure #{self.failures} of #{self.times}."
+    "Cpu usage of the #{self.daemon} process above threshold of #{self.above}%. Was #{@cpu}%. Failure #{self.failures} of #{self.times}."
   end
 end
 
