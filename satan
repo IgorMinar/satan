@@ -181,11 +181,11 @@ class Satan
     p "Restarting service #{proc.fmri}"
     notify_admin(proc, rule, contact) unless contact.nil? or !contact.include?('@')
     unless safe_mode
-      `svcadm restart #{proc.fmri}`
+      svcadm_restart(proc.fmri)
       sleep self.restart_grace
       pids = self.extract_pids.join(' ')
       p "Killing the following pids for service #{proc.fmri}: #{pids}"
-      `kill -9 #{pids}`
+      kill pids
     end
   end
 
@@ -202,6 +202,14 @@ class Satan
 
   def hostname
     `hostname`.strip
+  end
+
+  def svcadm_restart(fmri)
+    `svcadm restart #{fmri}`
+  end
+
+  def kill(pids)
+    `kill -9 #{pids}`
   end
 end
 

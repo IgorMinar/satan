@@ -16,7 +16,7 @@ end
 
 
 class Satan
-  attr_reader :email
+  attr_reader :email, :restarted, :restarted_fmri, :killed, :killed_pids
   
   def send_email(subject, message, address)
     @email = { :subject => subject, :message => message, :address => address }
@@ -24,6 +24,16 @@ class Satan
 
   def hostname
     "testhost"
+  end
+
+  def svcadm_restart(fmri)
+    @restarted = true
+    @restarted_fmri = fmri
+  end
+
+  def kill(pids)
+    @killed = true
+    @killed_pids = pids
   end
 end
 
