@@ -182,7 +182,7 @@ class Satan
     notify_admin(proc, rule, contact) unless contact.nil? or !contact.include?('@')
     unless safe_mode
       `svcadm restart #{proc.fmri}`
-      `sleep #{self.restart_grace}`
+      sleep self.restart_grace
       pids = self.extract_pids.join(' ')
       p "Killing the following pids for service #{proc.fmri}: #{pids}"
       `kill -9 #{pids}`
