@@ -270,7 +270,7 @@ class HttpRule < WatchRule
         uri = URI.parse(self.uri)
         req = Net::HTTP::Get.new(self.uri)
         resp = Net::HTTP.new(uri.host,uri.port).start do |http|
-          http.timeout = self.timeout if self.timeout
+          http.read_timeout = self.timeout if self.timeout
           http.request(req)
         end
         passed(resp.code.to_i == 200)
