@@ -222,13 +222,14 @@ end
 
 
 module PsParser
-  def ps_for_pid(pid)
-    `ps -o pid,pcpu,rss,args -p #{pid}`
-  end
-
   def ps(pid)
     out = ps_for_pid(pid).split(/\n/)[1].split(/ /).delete_if {|arg| arg == "" or arg.nil? }
     { :pid=>out[0].to_i, :cpu=>out[1].to_i, :rss=>out[2].to_i*1024, :command=>out[3..out.size].join(' ') }
+  end
+
+  private
+  def ps_for_pid(pid)
+    `ps -o pid,pcpu,rss,args -p #{pid}`
   end
 end
 
