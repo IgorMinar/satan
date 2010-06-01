@@ -38,7 +38,7 @@ describe Satan do
     end
 
     satan.email[:subject].should == "[SATAN] Restarted webserver on testhost"
-    satan.email[:message].should == "[SATAN] Restarted webserver on testhost\n\nCommand:\twserver\nRule:\tWarpCoreTempRule\nWarp core overheating! Temp: 120"
+    satan.email[:message].should == "[SATAN] Restarted webserver on testhost\n\nDaemon:\twserver\nRule:\tWarpCoreTempRule\nWarp core overheating! Temp: 120"
     satan.email[:address].should == "foo@bar"
     temps.should == [40, 30]
     satan.restarted.should == true
@@ -74,7 +74,7 @@ describe Satan do
     end
 
     satan.email[:subject].should == "[SATAN] Restarted webserver on testhost"
-    satan.email[:message].should == "[SATAN] Restarted webserver on testhost\n\nCommand:\twserver\nRule:\tWarpCoreTempRule\nWarp core overheating! Temp: 120"
+    satan.email[:message].should == "[SATAN] Restarted webserver on testhost\n\nDaemon:\twserver\nRule:\tWarpCoreTempRule\nWarp core overheating! Temp: 120"
     satan.email[:address].should == "foo@bar"
     temps.should == [40, 30]
     satan.restarted.should == true
