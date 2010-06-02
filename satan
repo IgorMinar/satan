@@ -105,6 +105,7 @@ module SvcsParser
     end
   end
 
+  private
   def pids_for_fmri
     `svcs -H -o FMRI -p #{@fmri}`
   end
