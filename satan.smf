@@ -31,7 +31,7 @@
         <loctext xml:lang="C">Satan</loctext>
       </common_name>
       <documentation>
-        <doc_link name="Satan docs" uri="http://github.com/victori/satan"/>
+        <doc_link name="Satan docs" uri="http://github.com/IgorMinar/satan"/>
       </documentation>
     </template>
   </service>
