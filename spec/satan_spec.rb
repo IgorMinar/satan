@@ -60,7 +60,7 @@ describe Satan do
       s.debug = true
       s.interval = 0
       s.contact = 'foo@bar'
-      s.restart_grace = 2.seconds
+      s.restart_grace = 0.seconds
 
       s.kill_if do |proc|
         proc.daemon = 'wserver'
