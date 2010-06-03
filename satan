@@ -71,7 +71,30 @@ class WatchRule
 end
 
 
+module PsParser
+  def ps(pid)
+    out = ps_for_pid(pid).split(/\n/)[1].split(/\s+/)
+    { :pid=>out[0].to_i,
+      :cpu=>out[1].to_i,
+      :rss=>out[2].to_i*1024,
+      :user=>out[3],
+      :group=>out[4]
+    }
+  end
+
+  private
+  def ps_for_pid(pid)
+    `ps -o pid,pcpu,rss,user,group -p #{pid}`
+  end
+
+  def args_for_pid(pid)
+    `ps -l #{pid}`
+  end
+end
+
+
 module SvcsParser
+  include PsParser
 
   def extract_pids
     lines = pids_for_fmri.split(/\n/)
@@ -83,7 +106,7 @@ module SvcsParser
     end
   end
 
-  def extract_pid(daemon = nil)
+  def extract_pid(daemon = nil, user = nil, args = nil)
     lines = pids_for_fmri.split(/\n/)
     if [0,1].include? lines.length
       raise RuntimeException, "service {#{@fmri}} not found"
@@ -94,9 +117,9 @@ module SvcsParser
         ex_pid = words[2].to_i
         ex_daemon = words[3]
 
-        if daemon.nil?
-          return ex_pid
-        elsif ex_daemon == self.daemon
+        if (daemon.nil? || daemon == ex_daemon) &&
+            (user.nil? || user == ps(ex_pid)[:user]) &&
+            (args.nil? || args_for_pid(ex_pid).include?(args))
           return ex_pid
         end
       end
@@ -115,13 +138,13 @@ end
 class WatchedProcess
   include SvcsParser
   
-  attr_accessor :daemon, :debug
+  attr_accessor :daemon, :user, :args, :debug
   attr_reader :fmri, :pid, :rules
 
   def pid
     return @pid unless @pid.nil?
 
-    @pid = extract_pid(self.daemon)
+    @pid = extract_pid(self.daemon, self.user, self.args)
   end
   
   def condition(rule_name)
@@ -218,19 +241,6 @@ class Satan
 
   def kill(pids)
     `kill -9 #{pids}`
-  end
-end
-
-
-module PsParser
-  def ps(pid)
-    out = ps_for_pid(pid).split(/\n/)[1].split(/ /).delete_if {|arg| arg == "" or arg.nil? }
-    { :pid=>out[0].to_i, :cpu=>out[1].to_i, :rss=>out[2].to_i*1024, :command=>out[3..out.size].join(' ') }
-  end
-
-  private
-  def ps_for_pid(pid)
-    `ps -o pid,pcpu,rss,args -p #{pid}`
   end
 end
 

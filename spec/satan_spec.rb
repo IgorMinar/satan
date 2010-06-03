@@ -80,6 +80,6 @@ describe Satan do
     satan.restarted.should == true
     satan.restarted_fmri == satan.fmri
     satan.killed.should == true
-    satan.killed_pids.should == "452 453 454"
+    satan.killed_pids.should == "452 453 454 455"
   end
 end

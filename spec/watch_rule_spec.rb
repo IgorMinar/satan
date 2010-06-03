@@ -1,4 +1,5 @@
 require 'satan'
+require 'satan_mocks'
 
 describe WatchRule do
   before(:each) do
@@ -153,19 +154,6 @@ describe JvmFreeHeapRule do
   end
 end
 
-
-PS_OUT = {
-  1 => "  PID %CPU    RSS ARGS
-12790   2.7 707020 java",
-  2 => "  PID %CPU    RSS ARGS
-12791  92.7 107020 httpd"
-}
-
-module PsParser
-  def ps_for_pid(pid)
-    PS_OUT[pid]
-  end
-end
 
 JSTAT_GCCAPACITY_OUT = {
   1 => " NGCMN    NGCMX     NGC     S0C   S1C       EC      OGCMN      OGCMX       OGC         OC      PGCMN    PGCMX     PGC       PC     YGC    FGC

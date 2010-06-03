@@ -39,7 +39,9 @@ Satan.watch do |s|
 
 
   s.kill_if do |process|
-    process.daemon = "java"               # name of the process that rules should be applied to
+    process.daemon = "java"               # (optional) name of the process that rules should be applied to
+    process.args = "myapp"                # (optional) substring to match in the arguments string
+    process.user = "webservd"             # (optional) effective user (owner) of the process
 
     process.condition(:cpu) do |cpu|      # on cpu condition
       cpu.above = 48.percent              # if above certain percentage
@@ -68,7 +70,7 @@ Satan.watch do |s|
 end
 
 
-HOW DOES IT WORK
+HOW IT WORKS
 
   - satan is started by SMF after the monitored app starts (because of the smf dependency)
   - satan will periodically invoke all the configured rules/conditions
