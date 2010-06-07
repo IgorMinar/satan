@@ -19,13 +19,13 @@ PARGS_OUT = {
 
 PS_OUT = {
   1 => "  PID %CPU    RSS     USER    GROUP
-12790   2.7 707020 webservd webservd",
+ 12790   2.7 707020 webservd webservd ",
   2 => "  PID %CPU    RSS     USER    GROUP
-12791  92.7 107020 webservd webservd",
+ 12791  92.7 107020 webservd webservd ",
   453 => "  PID %CPU    RSS     USER    GROUP
-12790   2.7 707020 root root",
+ 12790   2.7 707020 root root ",
   454 => "  PID %CPU    RSS     USER    GROUP
-12791  92.7 107020 webservd webservd"
+ 12791  92.7 107020 webservd webservd "
 }
 
 module SvcsParser
