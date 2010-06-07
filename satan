@@ -289,9 +289,7 @@ class HttpRule < WatchRule
       unless passed(resp.code.to_i == 200)
         p "http failure: status code was " << resp.code
       end
-    rescue SignalException => e
-      raise e #re-raise SIGTERM, etc
-    rescue Exception => e
+    rescue RuntimeError, Timeout::Error => e
       passed(false)
       p "http failure: #{e.class} - #{e}"
     end
